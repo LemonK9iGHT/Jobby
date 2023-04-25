@@ -1,0 +1,167 @@
+datasource db {
+    provider = "mongodb"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model User {
+    id            String    @id @default(auto()) @map("_id") @db.ObjectId
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+
+    firstName       String?
+    lastName        String?
+    password        String?
+    passwordEnabled Boolean  @default(false)
+    role            UserRole @default(CANDIDATE)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    candidate Candidate?
+    employer  Employer?
+
+    @@map("users")
+}
+
+enum UserRole {
+    EMPLOYER
+    CANDIDATE
+}
+
+type Link {
+    label String
+    href  String
+}
+
+model Candidate {
+    id        String  @id @default(auto()) @map("_id") @db.ObjectId
+    email     String
+    firstName String
+    lastName  String?
+    userId    String  @unique @db.ObjectId
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    candidateProfile CandidateProfile?
+
+    likedJobIds String[]     @db.ObjectId
+    likedJobs   JobPosting[] @relation("LikedJob", fields: [likedJobIds], references: [id])
+
+    appliedJobIds String[]     @db.ObjectId
+    appliedJobs   JobPosting[] @relation("AppliedJob", fields: [appliedJobIds], references: [id])
+
+    @@map("candidates")
+}
+
+model Employer {
+    id     String @id @default(auto()) @map("_id") @db.ObjectId
+    email  String
+    userId String @unique @db.ObjectId
+
+    user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    employer EmployerProfile?
+    jobs     JobPosting[]
+
+    @@map("employers")
+}
+
+type Skill {
+    label String
+    value String
+}
+
+model CandidateProfile {
+    id                String  @id @default(auto()) @map("_id") @db.ObjectId
+    candidateId       String  @unique @db.ObjectId
+    fullName          String
+    jobTitle          String?
+    phone             String?
+    email             String  @unique
+    website           String?
+    experienceInYears String?
+    age               String?
+    skills            Skill[]
+    showInListings    Boolean @default(true)
+    bio               String?
+    image             String?
+
+    country String?
+    city    String?
+    state   String?
+    pincode String?
+
+    isComplete Boolean @default(false)
+
+    candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+    @@map("candidate_profiles")
+}
+
+model EmployerProfile {
+    id         String @id @default(auto()) @map("_id") @db.ObjectId
+    employerId String @unique @db.ObjectId
+
+    companyName        String
+    companySize        String
+    companyWebsite     String?
+    companyFoundedYear String?
+    companyPhone       String
+    companyEmail       String
+    companyAddress     String
+    companyDescription String?
+    socialLinks        Link[]
+    companyImage       String?
+    image              String?
+
+    country String?
+    city    String?
+    state   String?
+    pincode String?
+
+    isComplete Boolean @default(false)
+
+    employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+    @@map("employer_profiles")
+}
+
+type Field {
+    value String
+}
+
+type Category {
+    label String
+    value String
+}
+
+model JobPosting {
+    id                  String     @id @default(auto()) @map("_id") @db.ObjectId
+    title               String
+    description         String
+    keyResponsibilities Field[]
+    skillAndExperience  Field[]
+    categories          Category[]
+    location            String
+    hours               String
+    salary              String
+    expirationDate      DateTime
+    createdAt           DateTime   @default(now())
+    updatedAt           DateTime   @updatedAt
+
+    employer   Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+    employerId String   @db.ObjectId
+
+    likedBy    Candidate[] @relation("LikedJob", fields: [likedByIds], references: [id])
+    likedByIds String[]    @db.ObjectId
+
+    appliedBy    Candidate[] @relation("AppliedJob", fields: [appliedByIds], references: [id])
+    appliedByIds String[]    @db.ObjectId
+
+    @@map("job_postings")
+}
